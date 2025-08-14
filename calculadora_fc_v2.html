@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Calculadora de FC — v2</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;background:#0b0f14;color:#e8edf2}
+  .wrap{max-width:900px;margin:auto;padding:16px}
+  .card{background:#121826;border:1px solid #233042;border-radius:12px;padding:14px;box-shadow:0 10px 20px rgba(0,0,0,.25)}
+  label{display:block;margin:8px 0 4px;color:#cbd5e1}
+  input,select,button{font-size:16px}
+  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #233042;background:#0c1220;color:#e8edf2}
+  button{padding:10px 14px;border-radius:10px;border:1px solid #233042;background:#0c1220;color:#e8edf2;cursor:pointer}
+  .grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border-bottom:1px dashed #243144;padding:8px;text-align:left}
+  .ok{color:#34d399}
+  .warn{color:#fbbf24}
+  .muted{color:#93a2b1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Calculadora de Frequência Cardíaca <span class="muted">— v2</span></h1>
+  <p class="muted" id="status">Status: carregado ✅</p>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Idade</label>
+        <input type="number" id="idade" placeholder="Ex.: 45" />
+      </div>
+      <div>
+        <label>Fórmula</label>
+        <select id="formula">
+          <option value="tanaka">Tanaka: 208 − 0,7×idade</option>
+          <option value="fox">Fox: 220 − idade</option>
+          <option value="gulati">Gulati (mulheres): 206 − 0,88×idade</option>
+          <option value="manual">Informarei FCmáx</option>
+        </select>
+      </div>
+      <div>
+        <label>Sexo</label>
+        <select id="sexo">
+          <option value="na">Prefiro não informar</option>
+          <option value="f">Feminino</option>
+          <option value="m">Masculino</option>
+        </select>
+      </div>
+      <div>
+        <label>FC de repouso (opcional p/ Karvonen)</label>
+        <input type="number" id="fcr" placeholder="Ex.: 62" />
+      </div>
+      <div>
+        <label>FCmáx medida (se souber)</label>
+        <input type="number" id="fcmaxManual" placeholder="Ex.: 186" />
+      </div>
+      <div style="display:flex;align-items:end;gap:8px">
+        <button id="calc">Calcular</button>
+        <button id="limpar">Limpar</button>
+      </div>
+    </div>
+    <div id="saida" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const idade=$('idade'), formula=$('formula'), sexo=$('sexo'), fcr=$('fcr'), fcmaxManual=$('fcmaxManual'), saida=$('saida');
+  $('calc').addEventListener('click', calc);
+  $('limpar').addEventListener('click', ()=>{[idade,fcr,fcmaxManual].forEach(i=>i.value="");saida.innerHTML="";});
+
+  function fcmax(){
+    const age = +idade.value || 0;
+    const manual = +fcmaxManual.value || 0;
+    const sex = sexo.value;
+    let f = formula.value;
+    if(f==='manual' && manual>0) return manual;
+    if(f==='gulati' && sex!=='f'){ f='tanaka'; }
+    if(!age){ return 0; }
+    if(f==='fox') return Math.round(220-age);
+    if(f==='tanaka') return Math.round(208-0.7*age);
+    if(f==='gulati') return Math.round(206-0.88*age);
+    return 0;
+  }
+
+  function calc(){
+    const max = fcmax();
+    if(max<=0){ saida.innerHTML='<p class="warn">Informe idade (ou FCmáx medida).</p>'; return; }
+    const rest = +fcr.value || null;
+    const ranges = [
+      ['Z1 • Recuperação', .50,.60],
+      ['Z2 • Leve',        .60,.70],
+      ['Z3 • Moderada',    .70,.80],
+      ['Z4 • Vigorosa',    .80,.90],
+      ['Z5 • Intensa',     .90,1.00],
+    ];
+    let html = `<p>FCmáx estimada: <b>${max} bpm</b></p>`;
+    html += `<table><thead><tr><th>Zona</th><th>%HRmáx</th><th>bpm</th>` + (rest?`<th>Karvonen (bpm)</th>`:'') + `</tr></thead><tbody>`;
+    ranges.forEach(([n,lo,hi])=>{
+      const p = `${Math.round(lo*100)}–${Math.round(hi*100)}%`;
+      const b1 = `${Math.round(max*lo)}–${Math.round(max*hi)}`;
+      let row = `<tr><td>${n}</td><td>${p}</td><td>${b1}</td>`;
+      if(rest){
+        const r = Math.max(max-rest,1);
+        const k1 = Math.round(r*lo + rest);
+        const k2 = Math.round(r*hi + rest);
+        row += `<td>${k1}–${k2}</td>`;
+      }
+      row += `</tr>`;
+      html += row;
+    });
+    html += `</tbody></table>`;
+    saida.innerHTML = html;
+  }
+
+  // Sinal de que o JS rodou
+  document.getElementById('status').textContent = 'Status: JavaScript em execução ✅';
+})();
+</script>
+</body>
+</html>
